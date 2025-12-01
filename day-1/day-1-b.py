@@ -2,8 +2,6 @@
 
 import re
 
-dial=list(range(100))
-
 pointing=50
 
 pointing_at_zero=0

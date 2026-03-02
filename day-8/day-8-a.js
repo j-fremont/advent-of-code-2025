@@ -4,37 +4,6 @@ const distanceBetween = (n1, n2) => Math.sqrt(Math.pow(n2.x-n1.x,2) + Math.pow(n
 
 const minExceptZero = arr => arr.reduce((acc, val, idx) => val !== 0 && val < acc.min ? { idx, min: val } : acc, { idx: undefined, min: Number.MAX_SAFE_INTEGER })
 
-const minDistance = dist => dist.reduce((acc, val, idx) => {
-
-	const cur = minExceptZero(val)
-
-	if (cur.min < acc.min) {
-
-		acc = {
-			idx1: cur.idx,
-			idx2: idx,
-			min: cur.min
-		}
-	}
-
-	return acc
-
-}, { idx1: undefined, idx2: undefined, min: Number.MAX_SAFE_INTEGER })
-
-const fullOfZeros = dist => dist.reduce((acc, val) => {
-
-	if (acc===undefined) {
-		acc = val.every(v => v===0)
-	} else {	
-		acc = acc && val.every(v => v===0)
-	}
-
-	return acc;
-
-}, undefined)
-
-//const fullOfZeros = dist => dist.reduce((acc, val) => [...acc, ...val], []).every(i => i===0)
-
 let coordinates = []
 
 const data = fs.readFileSync('input.txt', 'utf8')
@@ -54,47 +23,58 @@ coordinates = lines.map(l => {
 	}
 })
 
-let distances = coordinates.reduce((acc, val) => {
+let distances = coordinates.reduce((acc, val, i) => {
 
-	let cur = coordinates.map(c => distanceBetween(c, val))
+	let cur = coordinates.filter((c, j) => i<j).map(c => distanceBetween(c, val))
 	acc = [...acc, cur]
 	return acc
 
 }, [])
 
-//console.log(Math.max(distances.reduce((acc, val) => [...acc, ...val], [])))
-//console.log(distances.reduce((acc, val) => [...acc, ...val], []))
+console.log(distances)
 
-const circuits = []
+const distancesWithIndex = distances.reduce((acc, val, idx2) => {
+	
+	const d = val.map((min, idx1) => ({
+		idx1,
+		idx2,
+		min
+	}))
 
-while (!fullOfZeros(distances)) {
+	return [...acc, ...d]
 
-	let m = minDistance(distances)
+}, []).sort((a, b) => a.min - b.min)
 
-	console.log(m)
+console.log(distancesWithIndex) 
 
-	const c1 = circuits.find(c => c.has(m.idx1))
-	const c2 = circuits.find(c => c.has(m.idx2))
+let circuits = []
+
+distancesWithIndex.forEach(d => {
+
+	let c1 = circuits.find(c => c.has(d.idx1))
+	let c2 = circuits.find(c => c.has(d.idx2))
 
 	if (c1 && !c2) {
-		c1.add(m.idx2)
+		c1.add(d.idx2)
 	} else if (c2 && !c1) {
-		c2.add(m.idx1)
+		c2.add(d.idx1)
 	} else if (!c1 && !c2) {
-		circuits.push(new Set([m.idx1, m.idx2]))
+		circuits.push(new Set([d.idx1, d.idx2]))
+	} else if (c1 && c2 && c1!==c2) {
+		c1 = new Set([...c1, ...c2])
+
+		circuits = circuits.filter(c => !(c.size===c2.size && [...c].every(x => c2.has(x))))
 	}
+})
 
-	distances[m.idx1][m.idx2] = 0
-	distances[m.idx2][m.idx1] = 0
+circuits.sort((a, b) => b.size - a.size)
 
-}	
-
-const sorted = circuits.sort((a, b) => a.size > b.size)
+console.log(circuits)
 
 let total = 1;
 
 for (i=0; i < 3; i++) {
-	total = total * sorted[i].size
+	total = total * circuits[i].size
 }
 
 console.log(total)
